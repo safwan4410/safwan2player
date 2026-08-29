@@ -10,6 +10,7 @@ orientation = portrait
 fullscreen = 0
 android.permissions = INTERNET, ACCESS_WIFI_STATE, CHANGE_WIFI_MULTICAST_STATE
 
+
 # تحديد إصدارات أندرويد المستقرة لتجنب أخطاء الترجمة
 android.api = 31
 android.min_api = 21
