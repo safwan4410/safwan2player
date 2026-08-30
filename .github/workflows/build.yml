@@ -37,7 +37,10 @@ jobs:
       - name: Prepare Android SDK
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Build APK
         id: build
@@ -46,33 +49,55 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           exit ${PIPESTATUS[0]}
 
-      - name: Show build errors
+      - name: Find APK
+        id: find_apk
         if: always()
         run: |
-          echo "===== BUILD ERRORS ====="
-          grep -Ei "error:|error |exception|failed|fatal|traceback|could not|not found|BUILD FAILED" build.log | tail -n 200 || true
-          echo "===== LAST 100 LINES ====="
-          tail -n 100 build.log
+          echo "======================================"
+          echo "SEARCHING FOR APK"
+          echo "======================================"
 
-      - name: Check APK
-        if: always()
-        run: |
-          echo "===== APK FILES ====="
           find . -type f -name "*.apk" -exec ls -lh {} \; 2>/dev/null || true
 
-          if find bin -type f -name "*.apk" | grep -q .; then
-            echo "APK FOUND!"
-          else
+          APK=$(find . -type f -name "*.apk" | head -n 1)
+
+          if [ -z "$APK" ]; then
             echo "NO APK FOUND!"
             exit 1
           fi
 
+          echo "APK FOUND:"
+          echo "$APK"
+
+          mkdir -p bin
+          cp "$APK" bin/SoloForge.apk
+
+          echo "APK copied to:"
+          ls -lh bin/SoloForge.apk
+
+      - name: Show build errors
+        if: always()
+        run: |
+          echo "======================================"
+          echo "IMPORTANT BUILD MESSAGES"
+          echo "======================================"
+
+          if [ -f build.log ]; then
+            grep -Ei "error:|error |exception|failed|fatal|traceback|could not|not found|BUILD FAILED" build.log | tail -n 200 || true
+
+            echo "======================================"
+            echo "LAST 100 LINES"
+            echo "======================================"
+
+            tail -n 100 build.log
+          fi
+
       - name: Upload APK
-        if: steps.build.outcome == 'success'
+        if: steps.find_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: SoloForge-APK
-          path: bin/*.apk
+          path: bin/SoloForge.apk
           if-no-files-found: error
 
       - name: Upload build log
@@ -82,3 +107,4 @@ jobs:
           name: build-log
           path: build.log
           if-no-files-found: warn
+```
